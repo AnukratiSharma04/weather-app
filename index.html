@@ -167,61 +167,94 @@
     <div id="loader"></div>
     <div id="result"></div>
   </div>
+<script>
+  const resultDiv = document.getElementById("result");
+  const loader = document.getElementById("loader");
 
-  <script>
-    const resultDiv = document.getElementById("result");
-    const loader = document.getElementById("loader");
+  async function getWeather() {
+    const location = document.getElementById("locationInput").value.trim();
+    resultDiv.style.display = "none";
+    resultDiv.classList.remove("error");
 
-    async function getWeather() {
-      const location = document.getElementById("locationInput").value.trim();
-      resultDiv.style.display = "none";
-      resultDiv.classList.remove("error");
+    if (!location) {
+      showError("❗ Please enter a location.");
+      return;
+    }
 
-      if (!location) {
-        showError("❗ Please enter a location.");
-        return;
-      }
+    loader.style.display = "block";
 
-      loader.style.display = "block";
+    const apiKey = "3d1e1c59aada45ba87b100340250906";
+    // Use HTTPS endpoint for API URL to avoid mixed content errors on GitHub Pages (HTTPS)
+   const apiUrl = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(location)}&aqi=yes`;
+const isGitHub = location.hostname.includes("github.io");
+const url = isGitHub ? `https://cors-anywhere.herokuapp.com/${apiUrl}` : apiUrl;
 
-      const apiKey = "3d1e1c59aada45ba87b100340250906";
-      const url = `http://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${location}&aqi=yes`;
+const response = await fetch(url);
 
-      try {
-        const response = await fetch(url);
-        if (!response.ok) {
+
+    try {
+      const response = await fetch(url);
+
+      // Check if response.ok else throw error
+      if (!response.ok) {
+        if(response.status === 400){
+          throw new Error("Please enter a valid location.");
+        }
+        else if(response.status === 401){
+          throw new Error("Invalid API key.");
+        }
+        else if(response.status === 403){
+          throw new Error("API key has no permission.");
+        }
+        else if(response.status === 429){
+          throw new Error("API request limit reached. Try later.");
+        }
+        else if(response.status === 500){
+          throw new Error("Server error, try again later.");
+        }
+        else{
           throw new Error("Location not found");
         }
-
-        const data = await response.json();
-        const temp = data.current.temp_c;
-        const condition = data.current.condition.text;
-        const icon = data.current.condition.icon;
-
-        resultDiv.innerHTML = `
-          <strong>📍 Location:</strong> ${data.location.name}, ${data.location.country}
-          <strong>🌡️ Temperature:</strong> ${temp} °C
-          <strong>🌤️ Condition:</strong> ${condition}
-          <img src="https:${icon}" alt="weather icon"/>
-        `;
-        resultDiv.classList.remove("error");
-      } catch (error) {
-        showError(`❌ ${error.message}`);
-      } finally {
-        loader.style.display = "none";
-        resultDiv.style.display = "block";
       }
-    }
 
-    function showError(message) {
-      resultDiv.innerHTML = message;
-      resultDiv.classList.add("error");
+      const data = await response.json();
+
+      // Defensive check: make sure data.current exists
+      if (!data.current) {
+        throw new Error("Weather data not available.");
+      }
+
+      const temp = data.current.temp_c;
+      const condition = data.current.condition.text;
+      const icon = data.current.condition.icon;
+
+      resultDiv.innerHTML = `
+        <strong>📍 Location:</strong> ${data.location.name}, ${data.location.country}<br>
+        <strong>🌡️ Temperature:</strong> ${temp} °C<br>
+        <strong>🌤️ Condition:</strong> ${condition}<br>
+        <img src="https:${icon}" alt="weather icon"/>
+      `;
+      resultDiv.classList.remove("error");
+    } catch (error) {
+      showError(`❌ ${error.message}`);
+    } finally {
+      loader.style.display = "none";
       resultDiv.style.display = "block";
     }
+  }
 
-    function toggleDarkMode() {
-      document.body.classList.toggle("dark");
-    }
-  </script>
+  function showError(message) {
+    resultDiv.innerHTML = message;
+    resultDiv.classList.add("error");
+    resultDiv.style.display = "block";
+  }
+
+  function toggleDarkMode() {
+    document.body.classList.toggle("dark");
+  }
+</script>
+
+  
+    
 </body>
 </html>
